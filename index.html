@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Camping · Primera semana de julio</title>
+<title>Camping · Mis listas</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap');
 
@@ -42,6 +42,86 @@
     background-size: 600px 600px;
   }
 
+  /* ── sidebar ── */
+  .sidebar-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,0.45);
+    z-index:50; opacity:0; pointer-events:none; transition:opacity .25s ease;
+  }
+  .sidebar-overlay.open{ opacity:1; pointer-events:auto; }
+
+  .sidebar{
+    position:fixed; top:0; left:0; height:100%;
+    width:300px; max-width:85vw;
+    background:var(--canvas-card);
+    z-index:60;
+    transform:translateX(-100%);
+    transition:transform .25s ease;
+    box-shadow:2px 0 20px rgba(0,0,0,0.25);
+    display:flex; flex-direction:column;
+  }
+  .sidebar.open{ transform:translateX(0); }
+
+  .sidebar-head{
+    background: linear-gradient(180deg, var(--forest) 0%, var(--forest-deep) 100%);
+    color:var(--canvas);
+    padding:18px 16px;
+    display:flex; align-items:center; justify-content:space-between;
+    font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:15px;
+    border-bottom:3px solid var(--clay);
+    flex-shrink:0;
+  }
+  .sidebar-close{
+    background:none; border:none; color:var(--canvas);
+    font-size:18px; cursor:pointer; padding:2px 6px; line-height:1;
+  }
+
+  .sidebar-list{ flex:1; overflow-y:auto; padding:10px; }
+
+  .sidebar-item{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:8px; padding:10px 10px; border-radius:8px;
+    margin-bottom:4px; cursor:default;
+    border:1px solid transparent;
+  }
+  .sidebar-item.active{
+    background: rgba(44,62,45,0.08);
+    border-color: var(--forest);
+  }
+  .sidebar-item-main{ flex:1; min-width:0; cursor:pointer; }
+  .sidebar-item-name{
+    font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:14.5px;
+    color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .sidebar-item-meta{ font-size:12px; color:var(--ink-soft); margin-top:2px; }
+  .sidebar-item-actions{ display:flex; gap:2px; flex-shrink:0; }
+  .sidebar-item-btn{
+    background:none; border:none; font-size:14px; cursor:pointer;
+    padding:4px 6px; border-radius:5px; color:var(--ink-soft);
+  }
+  .sidebar-item-btn:hover{ background:rgba(0,0,0,0.06); }
+
+  .sidebar-item-input, .sidebar-item-date{
+    width:100%; border:1px solid var(--line); border-radius:6px;
+    padding:7px 9px; font-family:'Inter',sans-serif; font-size:13.5px;
+    margin-bottom:6px; background:#fff; color:var(--ink);
+  }
+  .sidebar-item-edit-actions{ display:flex; gap:6px; margin-top:2px; }
+  .sidebar-item-save, .sidebar-item-cancel{
+    border:none; border-radius:6px; padding:6px 12px;
+    font-size:12.5px; font-weight:600; cursor:pointer;
+  }
+  .sidebar-item-save{ background:var(--forest); color:#fff; }
+  .sidebar-item-cancel{ background:none; border:1px solid var(--line); color:var(--ink-soft); }
+
+  .sidebar-foot{ padding:10px; border-top:1px dashed var(--line); flex-shrink:0; }
+  .sidebar-add-btn{
+    width:100%; background:none; border:1px dashed var(--line);
+    color:var(--ink-soft); border-radius:8px; padding:11px;
+    font-size:13.5px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif;
+  }
+  .sidebar-add-form{ background:rgba(0,0,0,0.02); border-radius:8px; padding:10px; }
+
+  /* ── header ── */
   header{
     background: linear-gradient(180deg, var(--forest) 0%, var(--forest-deep) 100%);
     color: var(--canvas);
@@ -54,6 +134,15 @@
     justify-content:space-between; gap:12px;
     margin-bottom:14px;
   }
+  .header-top-left{ display:flex; align-items:flex-start; gap:10px; min-width:0; }
+  .menu-btn{
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: var(--canvas);
+    font-size:16px; line-height:1; cursor:pointer;
+    border-radius:8px; padding:7px 10px; flex-shrink:0;
+  }
+  .menu-btn:hover{ background: rgba(255,255,255,0.18); }
   .header-actions{
     display:flex; flex-direction:column; gap:7px;
     align-items:flex-end; flex-shrink:0;
@@ -77,7 +166,7 @@
   }
   .hdr-btn--primary:hover{ background: #D97435; }
   .eyebrow{ font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#C9D6BE; margin-bottom:6px; font-weight:600; }
-  h1{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:26px; margin:0 0 16px 0; letter-spacing:-0.01em; }
+  h1{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:26px; margin:0 0 16px 0; letter-spacing:-0.01em; overflow:hidden; text-overflow:ellipsis; }
 
   .progress-wrap{ display:flex; align-items:center; gap:14px; }
   .progress-track{ flex:1; height:10px; background:rgba(255,255,255,0.15); border-radius:6px; overflow:hidden; }
@@ -261,11 +350,24 @@
 
 <div class="topo"></div>
 
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-head">
+    <span>📋 Mis listas</span>
+    <button class="sidebar-close" id="sidebarClose">✕</button>
+  </div>
+  <div class="sidebar-list" id="sidebarList"></div>
+  <div class="sidebar-foot" id="sidebarFoot"></div>
+</nav>
+
 <header>
   <div class="header-top">
-    <div>
-      <div class="eyebrow">Camping · 1ª semana de julio</div>
-      <h1>Lista de equipaje</h1>
+    <div class="header-top-left">
+      <button class="menu-btn" id="menuBtn" title="Mis listas">☰</button>
+      <div>
+        <div class="eyebrow" id="listEyebrow">Camping</div>
+        <h1 id="listTitle">Lista de equipaje</h1>
+      </div>
     </div>
     <div class="header-actions">
       <button class="hdr-btn" id="resetBtn">✕ Desmarcar</button>
@@ -309,11 +411,15 @@ const DEFAULT_CATEGORIES = [
 ];
 
 // ── Runtime state ──
-let customItems  = {};   // { catId: ['item', ...] }
-let customTitles = {};   // { catId: 'Título personalizado' }
-let checks = {};         // { 'catId:i': true }
-let editMode = {};       // { catId: true } 
-let collapsed = {};      // { catId: true }
+// Cada lista: { id, name, date('YYYY-MM-DD'), categories:[{id,icon,title,accent,items:[]}], checks:{'catId:i':true} }
+let lists = [];
+let activeListId = null;
+let editMode = {};        // { catId: true } — modo edición de categoría, sólo para la lista activa
+let collapsed = {};       // { catId: true }
+let addingCategory = false;
+let addingList = false;
+let editingListId = null;
+let sidebarOpen = false;
 
 // ══════════════════════════════════════════════════════════════════════════
 // CONFIGURACIÓN — solo Iván toca estas dos líneas
@@ -454,17 +560,61 @@ function scheduleSave(){
   saveTimer = setTimeout(()=> save(), 1200);
 }
 
+// ── Texto seguro para innerHTML ──
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ── Migración del formato antiguo (una sola lista, sin "lists") ──────────
+function migrateOldFormat(d){
+  const deleted = d.deletedCategories || {};
+  const categories = DEFAULT_CATEGORIES.filter(c=>!deleted[c.id]).map(c=>({
+    id: c.id, icon: c.icon, accent: c.accent,
+    title: (d.customTitles && d.customTitles[c.id]) || c.title,
+    items: (d.customItems && d.customItems[c.id]) || c.items.slice()
+  }));
+  (d.customCategories||[]).forEach(cc=>{
+    categories.push({ id:cc.id, icon:cc.icon||'📦', title:cc.title, accent:cc.accent||'#2C3E2D', items:(cc.items||[]).slice() });
+  });
+  const id = 'lista-camping-2026';
+  return {
+    lists: [{ id, name:'Lista Camping 2026', date:'2026-07-01', categories, checks: d.checks || {} }],
+    activeListId: id
+  };
+}
+
+// ── Garantiza que siempre hay al menos una lista y una activa válida ─────
+function ensureDefaultList(){
+  if(lists.length){
+    if(!activeListId || !lists.find(l=>l.id===activeListId)){
+      activeListId = sortedLists()[0].id;
+    }
+    return;
+  }
+  const categories = DEFAULT_CATEGORIES.map(c=>({ id:c.id, icon:c.icon, title:c.title, accent:c.accent, items:c.items.slice() }));
+  const id = 'lista-camping-2026';
+  lists = [{ id, name:'Lista Camping 2026', date:'2026-07-01', categories, checks:{} }];
+  activeListId = id;
+}
+
+function sortedLists(){
+  return lists.slice().sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+}
+
+function activeList(){ return lists.find(l=>l.id===activeListId); }
+
 // ── Persistence ──
 async function load(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
     if(raw){
-      const d = JSON.parse(raw);
-      customItems  = d.customItems  || {};
-      customTitles = d.customTitles || {};
-      checks       = d.checks       || {};
+      let d = JSON.parse(raw);
+      if(!d.lists) d = migrateOldFormat(d);
+      lists = d.lists || [];
+      activeListId = d.activeListId || (lists[0] && lists[0].id) || null;
     }
   }catch(e){}
+  ensureDefaultList();
 
   if(!ENCRYPTED_CONFIG){ setSync('local', 'Setup pendiente'); return; }
 
@@ -480,11 +630,12 @@ async function load(){
     const data = await r.json();
     const content = data.files?.[GIST_FILENAME]?.content;
     if(content){
-      const d = JSON.parse(content);
-      customItems  = d.customItems  || {};
-      customTitles = d.customTitles || {};
-      checks       = d.checks       || {};
-      localStorage.setItem(STORAGE_KEY, content);
+      let d = JSON.parse(content);
+      if(!d.lists) d = migrateOldFormat(d);
+      lists = d.lists || [];
+      activeListId = d.activeListId || (lists[0] && lists[0].id) || null;
+      ensureDefaultList();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ lists, activeListId }, null, 2));
     }
     const ts = data.updated_at
       ? new Date(data.updated_at).toLocaleString('es-ES',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})
@@ -497,7 +648,7 @@ async function load(){
 }
 
 async function save(){
-  const payload = JSON.stringify({ customItems, customTitles, checks }, null, 2);
+  const payload = JSON.stringify({ lists, activeListId }, null, 2);
   try{ localStorage.setItem(STORAGE_KEY, payload); }catch(e){}
 
   if(!ENCRYPTED_CONFIG) return;
@@ -524,46 +675,205 @@ async function save(){
   }
 }
 
-// ── Helpers ──
-function getItems(catId){
-  return customItems[catId] !== undefined
-    ? customItems[catId]
-    : DEFAULT_CATEGORIES.find(c=>c.id===catId).items.slice();
-}
+// ── Helpers de categorías (operan siempre sobre la lista activa) ─────────
+function getAllCategories(){ return activeList().categories; }
+function findCat(catId){ return activeList().categories.find(c=>c.id===catId); }
 
-function getTitle(catId){
-  return customTitles[catId] !== undefined
-    ? customTitles[catId]
-    : DEFAULT_CATEGORIES.find(c=>c.id===catId).title;
-}
+function getItems(catId){ return findCat(catId).items.slice(); }
+function getTitle(catId){ return findCat(catId).title; }
 
 function setTitle(catId, val){
-  const def = DEFAULT_CATEGORIES.find(c=>c.id===catId).title;
-  customTitles[catId] = val.trim() || def;
+  const c = findCat(catId);
+  c.title = val.trim() || c.title;
 }
 
 function setItems(catId, arr){
+  const checks = activeList().checks;
   // Re-map checks: build fresh check map by text so we don't lose state after reorder/delete
   const oldItems = getItems(catId);
   const oldChecks = {};
   oldItems.forEach((txt,i)=>{ if(checks[catId+':'+i]) oldChecks[txt]=true; });
-  customItems[catId] = arr;
+  findCat(catId).items = arr;
   // Clear old keys for this cat
   Object.keys(checks).filter(k=>k.startsWith(catId+':')).forEach(k=>delete checks[k]);
   arr.forEach((txt,i)=>{ if(oldChecks[txt]) checks[catId+':'+i]=true; });
 }
 
+function addCategory(title, icon, accent){
+  const id = 'cat-' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+  activeList().categories.push({ id, icon: icon || '📦', title, accent: accent || '#2C3E2D', items: [] });
+}
+
+function deleteCategory(catId){
+  const al = activeList();
+  al.categories = al.categories.filter(c=>c.id!==catId);
+  Object.keys(al.checks).filter(k=>k.startsWith(catId+':')).forEach(k=>delete al.checks[k]);
+  delete editMode[catId];
+  delete collapsed[catId];
+}
+
 function allKeys(){
   const keys=[];
-  DEFAULT_CATEGORIES.forEach(c=>getItems(c.id).forEach((_,i)=>keys.push(c.id+':'+i)));
+  getAllCategories().forEach(c=>c.items.forEach((_,i)=>keys.push(c.id+':'+i)));
   return keys;
+}
+
+// ── Helpers de listas ──────────────────────────────────────────────────
+function addList(name, date){
+  const id = 'list-' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+  lists.push({ id, name, date: date || '', categories: [], checks: {} });
+  return id;
+}
+
+function deleteList(listId){
+  lists = lists.filter(l=>l.id!==listId);
+  if(activeListId===listId) activeListId = null;
+  ensureDefaultList();
+}
+
+// ── Sidebar (menú de listas) ──────────────────────────────────────────
+function openSidebar(){
+  sidebarOpen = true;
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebarOverlay').classList.add('open');
+}
+function closeSidebar(){
+  sidebarOpen = false;
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+}
+
+function renderSidebar(){
+  const listEl = document.getElementById('sidebarList');
+  listEl.innerHTML = '';
+
+  sortedLists().forEach(l=>{
+    const item = document.createElement('div');
+    item.className = 'sidebar-item' + (l.id===activeListId ? ' active' : '');
+
+    if(editingListId === l.id){
+      item.innerHTML = `
+        <div style="flex:1;">
+          <input type="text" class="sidebar-item-input" id="editListName" value="${escapeHtml(l.name)}" placeholder="Nombre de la lista">
+          <input type="date" class="sidebar-item-date" id="editListDate" value="${l.date||''}">
+          <div class="sidebar-item-edit-actions">
+            <button class="sidebar-item-save" id="editListSave">Guardar</button>
+            <button class="sidebar-item-cancel" id="editListCancel">Cancelar</button>
+          </div>
+        </div>
+      `;
+      listEl.appendChild(item);
+      document.getElementById('editListSave').addEventListener('click', ()=>{
+        const name = document.getElementById('editListName').value.trim();
+        const date = document.getElementById('editListDate').value;
+        if(name) l.name = name;
+        l.date = date;
+        editingListId = null;
+        scheduleSave();
+        render();
+      });
+      document.getElementById('editListCancel').addEventListener('click', ()=>{ editingListId=null; render(); });
+      return;
+    }
+
+    const keys = l.categories.flatMap(c=>c.items.map((_,i)=>c.id+':'+i));
+    const done = keys.filter(k=>l.checks[k]).length;
+    const dateLabel = l.date ? new Date(l.date+'T00:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'}) : 'Sin fecha';
+    item.innerHTML = `
+      <div class="sidebar-item-main" data-selectlist="${l.id}">
+        <div class="sidebar-item-name">${escapeHtml(l.name)}</div>
+        <div class="sidebar-item-meta">${dateLabel} · ${done}/${keys.length}</div>
+      </div>
+      <div class="sidebar-item-actions">
+        <button class="sidebar-item-btn" data-editlist="${l.id}" title="Editar">✏️</button>
+        <button class="sidebar-item-btn" data-dellist="${l.id}" title="Eliminar">🗑️</button>
+      </div>
+    `;
+    listEl.appendChild(item);
+  });
+
+  listEl.querySelectorAll('[data-selectlist]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      activeListId = el.dataset.selectlist;
+      editMode = {}; collapsed = {}; addingCategory = false;
+      closeSidebar();
+      render();
+    });
+  });
+  listEl.querySelectorAll('[data-editlist]').forEach(el=>{
+    el.addEventListener('click', e=>{
+      e.stopPropagation();
+      editingListId = el.dataset.editlist;
+      render();
+    });
+  });
+  listEl.querySelectorAll('[data-dellist]').forEach(el=>{
+    el.addEventListener('click', e=>{
+      e.stopPropagation();
+      const l = lists.find(x=>x.id===el.dataset.dellist);
+      if(!confirm(`¿Eliminar la lista "${l.name}" y todo su contenido?`)) return;
+      deleteList(l.id);
+      scheduleSave();
+      render();
+    });
+  });
+
+  // ── pie del sidebar: añadir nueva lista ──
+  const foot = document.getElementById('sidebarFoot');
+  foot.innerHTML = '';
+  if(addingList){
+    const wrap = document.createElement('div');
+    wrap.className = 'sidebar-add-form';
+    const today = new Date().toISOString().slice(0,10);
+    wrap.innerHTML = `
+      <input type="text" id="newListName" class="sidebar-item-input" placeholder="Nombre de la lista">
+      <input type="date" id="newListDate" class="sidebar-item-date" value="${today}">
+      <div class="sidebar-item-edit-actions">
+        <button class="sidebar-item-save" id="newListConfirm">Crear</button>
+        <button class="sidebar-item-cancel" id="newListCancel">Cancelar</button>
+      </div>
+    `;
+    foot.appendChild(wrap);
+    const doCreateList = ()=>{
+      const name = document.getElementById('newListName').value.trim();
+      if(!name) return;
+      const date = document.getElementById('newListDate').value;
+      const id = addList(name, date);
+      activeListId = id;
+      addingList = false;
+      editMode = {}; collapsed = {}; addingCategory = false;
+      scheduleSave();
+      closeSidebar();
+      render();
+    };
+    document.getElementById('newListConfirm').addEventListener('click', doCreateList);
+    document.getElementById('newListName').addEventListener('keydown', e=>{ if(e.key==='Enter') doCreateList(); });
+    document.getElementById('newListCancel').addEventListener('click', ()=>{ addingList=false; render(); });
+    setTimeout(()=>document.getElementById('newListName')?.focus(), 50);
+  } else {
+    const btn = document.createElement('button');
+    btn.className = 'sidebar-add-btn';
+    btn.textContent = '+ Nueva lista';
+    btn.addEventListener('click', ()=>{ addingList = true; render(); });
+    foot.appendChild(btn);
+  }
 }
 
 // ── Rendering ──
 function render(){
+  ensureDefaultList();
+  renderSidebar();
+
+  const al = activeList();
+  document.getElementById('listTitle').textContent = al.name;
+  document.getElementById('listEyebrow').textContent = al.date
+    ? new Date(al.date+'T00:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'long',year:'numeric'})
+    : 'Sin fecha asignada';
+
+  const checks = al.checks;
   const main = document.getElementById('main');
   main.innerHTML = '';
-  DEFAULT_CATEGORIES.forEach(cat => {
+  getAllCategories().forEach(cat => {
     const items = getItems(cat.id);
     const checkedCount = items.filter((_,i)=>!!checks[cat.id+':'+i]).length;
     const isEdit = !!editMode[cat.id];
@@ -580,12 +890,15 @@ function render(){
     const displayTitle = getTitle(cat.id);
     head.innerHTML = `
       <div class="category-head-left">
-        <span class="cat-icon">${cat.icon}</span>
-        <span class="cat-title">${displayTitle}</span>
+        <span class="cat-icon">${escapeHtml(cat.icon)}</span>
+        <span class="cat-title">${escapeHtml(displayTitle)}</span>
         <span class="cat-count" data-countfor="${cat.id}">${checkedCount}/${items.length}</span>
         <span class="chevron">▼</span>
       </div>
-      <button class="edit-toggle" data-editcat="${cat.id}">${isEdit ? '✓ Listo' : '✏️ Editar'}</button>
+      <div style="display:flex;align-items:center;gap:6px;">
+        ${isEdit ? `<button class="del-btn" data-delcat="${cat.id}" title="Eliminar categoría" style="font-size:16px;">🗑️</button>` : ''}
+        <button class="edit-toggle" data-editcat="${cat.id}">${isEdit ? '✓ Listo' : '✏️ Editar'}</button>
+      </div>
     `;
     head.querySelector('.category-head-left').addEventListener('click', ()=>{
       collapsed[cat.id] = !collapsed[cat.id];
@@ -595,6 +908,13 @@ function render(){
       e.stopPropagation();
       editMode[cat.id] = !editMode[cat.id];
       if(editMode[cat.id]) collapsed[cat.id] = false;
+      render();
+    });
+    head.querySelector('[data-delcat]')?.addEventListener('click', e=>{
+      e.stopPropagation();
+      if(!confirm(`¿Eliminar la categoría "${displayTitle}" y todos sus artículos?`)) return;
+      deleteCategory(cat.id);
+      scheduleSave();
       render();
     });
     card.appendChild(head);
@@ -614,7 +934,7 @@ function render(){
       titleInput.type = 'text';
       titleInput.className = 'cat-title-edit';
       titleInput.value = getTitle(cat.id);
-      titleInput.placeholder = DEFAULT_CATEGORIES.find(c=>c.id===cat.id).title;
+      titleInput.placeholder = 'Nombre de categoría';
       titleInput.addEventListener('change', ()=>{
         setTitle(cat.id, titleInput.value);
         scheduleSave();
@@ -751,17 +1071,56 @@ function render(){
     main.appendChild(card);
   });
 
+  // ── Añadir nueva categoría ──
+  const addCatWrap = document.createElement('div');
+  if(addingCategory){
+    addCatWrap.style.cssText = 'background:#FBF7EE;border:1px dashed #DCD0B6;border-radius:8px;padding:14px;margin-bottom:14px;';
+    addCatWrap.innerHTML = `
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <input id="newCatIcon" type="text" maxlength="2" placeholder="📦" style="width:48px;text-align:center;border:1px solid #DCD0B6;border-radius:6px;padding:8px;font-size:16px;box-sizing:border-box;">
+        <input id="newCatTitle" type="text" placeholder="Nombre de la categoría" style="flex:1;border:1px solid #DCD0B6;border-radius:6px;padding:8px 10px;font-family:Inter,sans-serif;font-size:14px;box-sizing:border-box;">
+        <input id="newCatColor" type="color" value="#2C3E2D" style="width:42px;border:1px solid #DCD0B6;border-radius:6px;padding:0;cursor:pointer;">
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button id="newCatConfirm" style="background:#2C3E2D;color:white;border:none;border-radius:6px;padding:8px 16px;font-weight:600;font-size:13px;cursor:pointer;">Crear categoría</button>
+        <button id="newCatCancel" style="background:none;border:1px solid #DCD0B6;color:#6B6256;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer;">Cancelar</button>
+      </div>
+    `;
+    main.appendChild(addCatWrap);
+    const doCreate = ()=>{
+      const title = document.getElementById('newCatTitle').value.trim();
+      if(!title) return;
+      const icon  = document.getElementById('newCatIcon').value.trim() || '📦';
+      const color = document.getElementById('newCatColor').value || '#2C3E2D';
+      addCategory(title, icon, color);
+      scheduleSave();
+      addingCategory = false;
+      render();
+    };
+    document.getElementById('newCatConfirm').addEventListener('click', doCreate);
+    document.getElementById('newCatTitle').addEventListener('keydown', e=>{ if(e.key==='Enter') doCreate(); });
+    document.getElementById('newCatCancel').addEventListener('click', ()=>{ addingCategory=false; render(); });
+    setTimeout(()=>document.getElementById('newCatTitle')?.focus(), 50);
+  } else {
+    addCatWrap.style.cssText = 'display:flex;justify-content:center;margin-bottom:14px;';
+    addCatWrap.innerHTML = `<button id="newCatBtn" style="background:none;border:1px dashed #DCD0B6;color:#6B6256;border-radius:8px;padding:12px;width:100%;font-size:14px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;">+ Añadir categoría</button>`;
+    main.appendChild(addCatWrap);
+    document.getElementById('newCatBtn').addEventListener('click', ()=>{ addingCategory=true; render(); });
+  }
+
   updateCountAndProgress();
 }
 
 function updateCountAndProgress(){
+  const al = activeList();
+  const checks = al.checks;
   const keys = allKeys();
   const total = keys.length;
   const done  = keys.filter(k=>checks[k]).length;
   const pct   = total ? Math.round((done/total)*100) : 0;
   document.getElementById('progressFill').style.width = pct+'%';
   document.getElementById('progressLabel').textContent = `${done} / ${total}`;
-  DEFAULT_CATEGORIES.forEach(c=>{
+  getAllCategories().forEach(c=>{
     const el = document.querySelector(`[data-countfor="${c.id}"]`);
     if(el){
       const items=getItems(c.id);
@@ -770,19 +1129,24 @@ function updateCountAndProgress(){
   });
 }
 
+document.getElementById('menuBtn').addEventListener('click', openSidebar);
+document.getElementById('sidebarClose').addEventListener('click', closeSidebar);
+document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
+
 document.getElementById('resetBtn').addEventListener('click', async ()=>{
-  checks = {};
+  const checks = activeList().checks;
+  Object.keys(checks).forEach(k=>delete checks[k]);
   await save();
   render();
 });
 
 document.getElementById('exportBtn').addEventListener('click', ()=>{
-  const data = JSON.stringify({ customItems, customTitles, checks }, null, 2);
+  const data = JSON.stringify({ lists, activeListId }, null, 2);
   const blob = new Blob([data], { type: 'application/json' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href     = url;
-  a.download = 'camping-julio-2026.json';
+  a.download = 'listas-camping.json';
   a.click();
   URL.revokeObjectURL(url);
 });
@@ -792,10 +1156,11 @@ document.getElementById('importFile').addEventListener('change', async (e)=>{
   if(!file) return;
   try{
     const text = await file.text();
-    const d    = JSON.parse(text);
-    customItems  = d.customItems  || {};
-    customTitles = d.customTitles || {};
-    checks       = d.checks       || {};
+    let d = JSON.parse(text);
+    if(!d.lists) d = migrateOldFormat(d);
+    lists = d.lists || [];
+    activeListId = d.activeListId || (lists[0] && lists[0].id) || null;
+    ensureDefaultList();
     await save();
     render();
   }catch(err){
@@ -807,6 +1172,7 @@ document.getElementById('importFile').addEventListener('change', async (e)=>{
 
 (async function init(){
   if(!ENCRYPTED_CONFIG){
+    ensureDefaultList();
     render();           // renderiza categorías vacías con barra de progreso
     showSetupScreen();  // superpone panel de setup en main
     return;
