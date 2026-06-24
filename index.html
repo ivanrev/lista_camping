@@ -315,26 +315,139 @@ let checks = {};         // { 'catId:i': true }
 let editMode = {};       // { catId: true } 
 let collapsed = {};      // { catId: true }
 
-// ── Gist config — rellena estos dos valores ──────────────────────────────
-const GITHUB_TOKEN = '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';   // ghp_xxxxxxxxxxxxxxxxxxxx
-const GIST_ID      = '6561d1ec44ecf76cae278dacb06909eb'; // el ID de la URL del gist
-// ─────────────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════
+// CONFIGURACIÓN — solo Iván toca estas dos líneas
+// Paso 1: deja ENCRYPTED_CONFIG = '' y abre la página → aparece el Setup
+// Paso 2: introduce token + Gist ID → copia la cadena generada aquí abajo
+// Paso 3: sube a GitHub → nadie ve el token en claro
+const PASSPHRASE      = 'camping-lista-2026';      // clave de cifrado (puedes cambiarla)
+const ENCRYPTED_CONFIG = 'sXMo7TrpdJZDFt113mvidUVL0JhqnLkWa4xfZna6TOkWr8GrbsNb4M9LKSdjmZC+j5oVNlp5V3uUS9w1b8TGKDxpe8oKpFt7Mc8J+cjFk7iaA3arjfEdXOqQ8IrN9YT0SzDLHD4jJyHtU/uWuNnCCu5jKQ2NnqBpA9DcAg==';                        // pega aquí la cadena del Setup
+// ══════════════════════════════════════════════════════════════════════════
 
 const GIST_FILENAME = 'camping-julio-2026.json';
-// (STORAGE_KEY ya definida arriba)
 
-const gistConfigured = () =>
-  GITHUB_TOKEN.length > 20 && GIST_ID.length > 20;
+// ── WebCrypto AES-GCM ─────────────────────────────────────────────────────
+async function _deriveKey(passphrase){
+  const enc = new TextEncoder();
+  const raw = await crypto.subtle.importKey('raw', enc.encode(passphrase), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name:'PBKDF2', salt: enc.encode('gist-salt-v1'), iterations:100000, hash:'SHA-256' },
+    raw, { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']
+  );
+}
+async function aesEncrypt(plaintext, passphrase){
+  const key = await _deriveKey(passphrase);
+  const iv  = crypto.getRandomValues(new Uint8Array(12));
+  const enc = new TextEncoder();
+  const ct  = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, enc.encode(plaintext));
+  const buf = new Uint8Array(12 + ct.byteLength);
+  buf.set(iv); buf.set(new Uint8Array(ct), 12);
+  return btoa(String.fromCharCode(...buf));
+}
+async function aesDecrypt(b64, passphrase){
+  const key = await _deriveKey(passphrase);
+  const buf = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  const dec = await crypto.subtle.decrypt({ name:'AES-GCM', iv: buf.slice(0,12) }, key, buf.slice(12));
+  return new TextDecoder().decode(dec);
+}
+
+// ── Obtener credenciales (descifrado automático al arrancar) ──────────────
+let _cachedCreds = null;
+async function getCreds(){
+  if(_cachedCreds) return _cachedCreds;
+  if(!ENCRYPTED_CONFIG) return null;
+  try{
+    const plain = await aesDecrypt(ENCRYPTED_CONFIG, PASSPHRASE);
+    _cachedCreds = JSON.parse(plain);
+    return _cachedCreds;
+  }catch(e){ return null; }
+}
+const gistConfigured = async () => { const c = await getCreds(); return !!(c?.token && c?.gistId); };
+
+// ── Pantalla de Setup (solo visible si ENCRYPTED_CONFIG está vacío) ───────
+function showSetupScreen(){
+  const main = document.getElementById('main');
+  const lbl = 'display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6B6256;margin-bottom:5px;';
+  const inp = 'width:100%;border:1px solid #DCD0B6;border-radius:6px;padding:9px 11px;font-family:Inter,sans-serif;font-size:14px;margin-bottom:14px;box-sizing:border-box;';
+  main.innerHTML = `
+    <div style="background:#FBF7EE;border:1px solid #DCD0B6;border-left:5px solid #C7642C;
+                border-radius:8px;padding:24px 20px;margin-top:4px;">
+      <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:17px;margin-bottom:4px;">
+        🔐 Setup de sincronización
+      </div>
+      <div style="font-size:13px;color:#6B6256;margin-bottom:20px;line-height:1.6;">
+        Introduce el token y el Gist ID. El resultado es una cadena cifrada con AES-256
+        que pegarás en el código — el token nunca queda en texto claro en GitHub.
+      </div>
+
+      <label style="${lbl}">GitHub Personal Access Token (scope: gist)</label>
+      <input id="cfgToken" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="${inp}">
+
+      <label style="${lbl}">Gist ID</label>
+      <input id="cfgGistId" type="text" placeholder="32 caracteres hex" style="${inp}">
+
+      <button id="cfgGen"
+        style="background:#2C3E2D;color:white;border:none;border-radius:6px;
+               padding:10px 20px;font-weight:600;font-size:14px;cursor:pointer;margin-bottom:16px;">
+        Generar cadena cifrada
+      </button>
+
+      <div id="cfgResult" style="display:none;">
+        <div style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+                    color:#6B6256;margin-bottom:6px;">
+          Copia esta cadena y pégala en <code>ENCRYPTED_CONFIG</code> del HTML:
+        </div>
+        <textarea id="cfgOutput" readonly rows="3"
+          style="width:100%;border:1px solid #DCD0B6;border-radius:6px;padding:9px 11px;
+                 font-family:monospace;font-size:12px;resize:vertical;box-sizing:border-box;
+                 background:#fff;color:#2B2620;"></textarea>
+        <button id="cfgCopy"
+          style="margin-top:8px;background:none;border:1px solid #2C3E2D;border-radius:6px;
+                 padding:7px 14px;font-size:13px;color:#2C3E2D;cursor:pointer;">
+          📋 Copiar
+        </button>
+      </div>
+      <div id="cfgStatus" style="margin-top:10px;font-size:13px;min-height:18px;"></div>
+    </div>
+  `;
+
+  document.getElementById('cfgGen').addEventListener('click', async ()=>{
+    const token  = document.getElementById('cfgToken').value.trim();
+    const gistId = document.getElementById('cfgGistId').value.trim();
+    const st     = document.getElementById('cfgStatus');
+    if(!token || !gistId){ st.style.color='#B03030'; st.textContent='⚠️ Rellena los dos campos.'; return; }
+    st.style.color='#6B6256'; st.textContent='⟳ Verificando conexión con GitHub…';
+    try{
+      const r = await fetch(`https://api.github.com/gists/${gistId}`,{
+        headers:{ 'Authorization':`token ${token}`, 'Accept':'application/vnd.github+json' }
+      });
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      const encrypted = await aesEncrypt(JSON.stringify({ token, gistId }), PASSPHRASE);
+      document.getElementById('cfgOutput').value = encrypted;
+      document.getElementById('cfgResult').style.display = 'block';
+      st.style.color='#2C7A2C'; st.textContent='✓ Conexión correcta. Copia la cadena al código.';
+    }catch(e){
+      st.style.color='#B03030'; st.textContent='✕ Error de conexión. Revisa el token y el Gist ID.';
+    }
+  });
+
+  document.getElementById('cfgCopy')?.addEventListener('click', ()=>{
+    const out = document.getElementById('cfgOutput');
+    out.select(); document.execCommand('copy');
+    document.getElementById('cfgCopy').textContent = '✓ Copiado';
+  });
+}
+// ─────────────────────────────────────────────────────────────────────────
 
 // ── Sync status indicator ──
 function setSync(state, msg){
   const el = document.getElementById('syncStatus');
   el.className = 'sync-status ' + state;
   const icons = { syncing:'⟳', ok:'✓', err:'✕', local:'○', '':'' };
-  el.textContent = (icons[state] || '') + (msg ? ' ' + msg : '');
+  el.textContent = (icons[state]||'') + (msg ? ' '+msg : '');
 }
 
-// ── Debounce para no saturar la API en ediciones rápidas ──
+// ── Debounce ──
 let saveTimer = null;
 function scheduleSave(){
   clearTimeout(saveTimer);
@@ -343,7 +456,6 @@ function scheduleSave(){
 
 // ── Persistence ──
 async function load(){
-  // Siempre cargamos primero del localStorage como fallback instantáneo
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
     if(raw){
@@ -354,17 +466,17 @@ async function load(){
     }
   }catch(e){}
 
-  if(!gistConfigured()){
-    setSync('local', 'Solo local · configura el Gist para sincronizar');
-    return;
-  }
+  if(!ENCRYPTED_CONFIG){ setSync('local', 'Setup pendiente'); return; }
+
+  const creds = await getCreds();
+  if(!creds){ setSync('err', 'Error al descifrar config'); return; }
 
   setSync('syncing', 'Cargando desde Gist…');
   try{
-    const r = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-      headers:{ 'Authorization': `token ${GITHUB_TOKEN}`, 'Accept': 'application/vnd.github+json' }
+    const r = await fetch(`https://api.github.com/gists/${creds.gistId}`, {
+      headers:{ 'Authorization':`token ${creds.token}`, 'Accept':'application/vnd.github+json' }
     });
-    if(!r.ok) throw new Error('HTTP ' + r.status);
+    if(!r.ok) throw new Error('HTTP '+r.status);
     const data = await r.json();
     const content = data.files?.[GIST_FILENAME]?.content;
     if(content){
@@ -372,40 +484,42 @@ async function load(){
       customItems  = d.customItems  || {};
       customTitles = d.customTitles || {};
       checks       = d.checks       || {};
-      // Actualizamos el backup local con lo que viene de la nube
       localStorage.setItem(STORAGE_KEY, content);
     }
-    const ts = data.updated_at ? new Date(data.updated_at).toLocaleString('es-ES',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
-    setSync('ok', 'Sincronizado' + (ts ? ' · ' + ts : ''));
+    const ts = data.updated_at
+      ? new Date(data.updated_at).toLocaleString('es-ES',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})
+      : '';
+    setSync('ok', 'Sincronizado' + (ts ? ' · '+ts : ''));
   }catch(e){
-    setSync('err', 'Sin conexión · usando datos locales');
+    setSync('err', 'Sin conexión · datos locales');
     console.warn('Gist load error:', e);
   }
 }
 
 async function save(){
   const payload = JSON.stringify({ customItems, customTitles, checks }, null, 2);
-  // Siempre guardamos en local como backup
   try{ localStorage.setItem(STORAGE_KEY, payload); }catch(e){}
 
-  if(!gistConfigured()) return;
+  if(!ENCRYPTED_CONFIG) return;
+  const creds = await getCreds();
+  if(!creds) return;
 
   setSync('syncing', 'Guardando…');
   try{
-    const r = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-      method: 'PATCH',
+    const r = await fetch(`https://api.github.com/gists/${creds.gistId}`, {
+      method:'PATCH',
       headers:{
-        'Authorization': `token ${GITHUB_TOKEN}`,
-        'Accept': 'application/vnd.github+json',
-        'Content-Type': 'application/json'
+        'Authorization':`token ${creds.token}`,
+        'Accept':'application/vnd.github+json',
+        'Content-Type':'application/json'
       },
       body: JSON.stringify({ files:{ [GIST_FILENAME]:{ content: payload } } })
     });
-    if(!r.ok) throw new Error('HTTP ' + r.status);
+    if(!r.ok) throw new Error('HTTP '+r.status);
     const ts = new Date().toLocaleString('es-ES',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-    setSync('ok', 'Guardado · ' + ts);
+    setSync('ok', 'Guardado · '+ts);
   }catch(e){
-    setSync('err', 'Error al guardar en Gist · cambios en local');
+    setSync('err', 'Error al guardar · cambios en local');
     console.error('Gist save error:', e);
   }
 }
@@ -692,6 +806,11 @@ document.getElementById('importFile').addEventListener('change', async (e)=>{
 });
 
 (async function init(){
+  if(!ENCRYPTED_CONFIG){
+    render();           // renderiza categorías vacías con barra de progreso
+    showSetupScreen();  // superpone panel de setup en main
+    return;
+  }
   await load();
   render();
 })();
